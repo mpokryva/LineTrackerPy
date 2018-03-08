@@ -53,23 +53,20 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     # Calculate angle.
     width = np.size(image, 1)
     height = np.size(image, 0)
-    print("width" + str(width))
-    print("height" + str(height))
-    xDist = abs(cx - width/2)
-    yDist = abs(cy - height)
+    bottomCenter = (width/2, height)
+    xDist = (cx - bottomCenter[0])
+    yDist = abs(cy - bottomCenter[1])
+    #print("xDist:" + str(xDist))
+    #print("yDist:" + str(yDist))
     angle = np.arctan2(xDist, yDist) * (180 / np.pi)
-    #print("Angle: " + str(angle))
+    print("Angle: " + str(angle))
     # + angle = left, - angle = right
-    bottomCenter = (width/2, height/2)
-    print(bottomCenter)
     # Draw stuff
     cv2.circle(image, (cx, cy), 4, (255, 255, 0), 2)
-    cv2.circle(image, (width/2, height/2), 4, (255, 0, 0), 2)
     drawContour(image, contour, (0, 0, 255), 4)
-    # cv2.line(image, (cx, cy), (width/2, height), (0, 255, 0), 4)
+    cv2.line(image, (cx, cy), bottomCenter, (0, 255, 0), 4)
     cv2.imshow("Frame", image)
     key = cv2.waitKey(1) & 0xFF
-
     # Clear the stream for the next frame.
     rawCapture.truncate(0)
 
