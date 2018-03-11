@@ -44,12 +44,12 @@ def close(img):
     kernel = np.ones((5, 5), np.uint8)
     return cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
 
-tau_p = 0.2
-tau_d = 3.0
-tau_i = 0.004
+tau_p = 0.3
+tau_d = 1.0
+tau_i = 0.00
 controller = pid.PIDController(tau_p, tau_i, tau_d)
 robot = Robot.Robot()
-
+move = True
 for frame in camera.capture_continuous(rawCapture, format="bgr", \
         use_video_port=True):
     image = frame.array
@@ -81,15 +81,21 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     
     steer = controller.pid(xDist, yDist, 1/camera.framerate)
     print("Steer: " + str(steer))
-    speed = 100
-    duration = 1/camera.framerate
-    if (steer > 0):
-        robot.right_deg(speed, steer)
-    elif (steer < 0):
-       robot.left_deg(speed, -1 * steer)
-    robot.move(speed, duration)
-
+    
     cv2.imshow("Frame", image)
+    
+    speed = 150
+    duration = 1/camera.framerate
+    if (move and abs(xDist) > 10):
+        if (xDist > 0):
+            print("TURNING RIGHT")
+            robot.right_deg(speed, duration)
+        elif (xDist < 0):
+            print("TURNING LEFT")
+            robot.left_deg(speed, 5)
+    if(move):
+        robot.forward(speed, duration)
+
     key = cv2.waitKey(1) & 0xFF
 
     # Clear the stream for the next frame.
