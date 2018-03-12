@@ -12,10 +12,10 @@ from MotorHatLibrary.examples import Robot
 
 camera = PiCamera()
 camera.resolution = (640,480)
-camera.framerate = 15
+camera.framerate = 30
 camera.hflip = True
 camera.vflip = True
-rawCapture = PiRGBArray(camera, size=(640, 480))
+rawCapture = PiRGBArray(camera, size=camera.resolution)
 
 time.sleep(0.1)
 
@@ -44,16 +44,17 @@ def close(img):
     kernel = np.ones((5, 5), np.uint8)
     return cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
 
-tau_p = 0.3
-tau_d = 1.0
-tau_i = 0.00
+tau_p = 0.2
+tau_d = 0.0
+tau_i = 0.0
 controller = pid.PIDController(tau_p, tau_i, tau_d)
 robot = Robot.Robot()
 move = True
+i = 0
 for frame in camera.capture_continuous(rawCapture, format="bgr", \
         use_video_port=True):
     image = frame.array
-    image = image[400:480]
+    image = image[camera.resolution[1] - 80: camera.resolution[1]]
     #image = image[300: 380]
     image = close(image)
     contour = getLargestContour(image)
@@ -84,21 +85,34 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     
     cv2.imshow("Frame", image)
     
-    speed = 150
+    minSpeed = 50
+    maxSpeed = 150
+    MAX_SPEED_ABSOLUTE = 255
+    incFactor = 2
+    #speed = min(minSpeed + (i*incFactor), maxSpeed)
+    speed = minSpeed
     duration = 1/camera.framerate
+    print(str(move))
     if (move and abs(xDist) > 10):
+        absSteer = abs(steer)
+        turnSpeed = min(int(speed * absSteer), MAX_SPEED_ABSOLUTE)
         if (xDist > 0):
             print("TURNING RIGHT")
-            robot.right_deg(speed, duration)
+            robot.right_deg(turnSpeed, duration)
         elif (xDist < 0):
             print("TURNING LEFT")
-            robot.left_deg(speed, 5)
+            robot.left_deg(turnSpeed, duration)
     if(move):
-        robot.forward(speed, duration)
-
+        #robot.forward(speed, duration)
+        robot.forward(speed)
     key = cv2.waitKey(1) & 0xFF
 
     # Clear the stream for the next frame.
     rawCapture.truncate(0)
     if key == ord("q"):
         break
+    elif key == ord("m"):
+        move = not move
+        if not move:
+            robot.stop()
+    i += 1
