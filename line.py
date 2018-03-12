@@ -45,8 +45,8 @@ def close(img):
     return cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
 
 tau_p = 0.2
-tau_d = 0.0
-tau_i = 0.0
+tau_d = 0.3
+tau_i = 0.1
 controller = pid.PIDController(tau_p, tau_i, tau_d)
 robot = Robot.Robot()
 move = True
@@ -89,10 +89,9 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     maxSpeed = 150
     MAX_SPEED_ABSOLUTE = 255
     incFactor = 2
-    #speed = min(minSpeed + (i*incFactor), maxSpeed)
-    speed = minSpeed
+    speed = min(minSpeed + (i*incFactor), maxSpeed)
+    #speed = minSpeed
     duration = 1/camera.framerate
-    print(str(move))
     if (move and abs(xDist) > 10):
         absSteer = abs(steer)
         turnSpeed = min(int(speed * absSteer), MAX_SPEED_ABSOLUTE)
