@@ -13,6 +13,6 @@ class PIDController:
         cte = xDist
         d_cte = (cte - self.prevError) / dt
         self.prevError = cte
-        self.errorSum += cte
+        self.errorSum += (cte * dt)
         return - self.tau_p * cte - self.tau_d * d_cte \
                 - self.tau_i * self.errorSum

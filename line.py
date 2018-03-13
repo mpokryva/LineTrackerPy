@@ -19,11 +19,13 @@ rawCapture = PiRGBArray(camera, size=camera.resolution)
 
 time.sleep(0.1)
 
-def getLargestContour(input, threshold):
+def getLargestContour(input, threshold, otsu=True):
     gray = cv2.cvtColor(input, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (3, 3), 0)
+    threshType = cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU if (otsu) \
+            else cv2.THRESH_BINARY_INV
     _,thresh = cv2.threshold(gray, threshold, 255, \
-            cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
+            threshType)
     _,contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, \
             cv2.CHAIN_APPROX_SIMPLE)
     # Get largest contour (by area)
@@ -44,12 +46,16 @@ def close(img):
     kernel = np.ones((5, 5), np.uint8)
     return cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
 
-tau_p = 0.2
-tau_d = 0.0
-tau_i = 0.0
+turn_p = 0.1
+turn_d = 0.01
+turn_i = 0.005
+forward_p = 0.01
+forward_d = 0.05
+forward_i = 0.005
 #tau_d = 0
 #tau_i = 0
-controller = pid.PIDController(tau_p, tau_i, tau_d)
+turnControl = pid.PIDController(turn_p, turn_i, turn_d)
+forwardControl = pid.PIDController(forward_p, forward_i, forward_d)
 robot = Robot.Robot()
 move = True
 i = 0
@@ -60,7 +66,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     #image = image[300: 380]
     image = close(image)
     threshold = 100
-    contour = getLargestContour(image, threshold)
+    contour = getLargestContour(image, threshold, True) # Don't do Otsu.
     moment = cv2.moments(contour)
     if (moment["m00"] != 0):
         cx = int(moment["m10"]/moment["m00"])
@@ -83,8 +89,8 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     drawContour(image, contour, (0, 0, 255), 4)
     cv2.line(image, (cx, cy), bottomCenter, (0, 255, 0), 4)
     
-    steer = controller.pid(xDist, yDist, 1/camera.framerate)
-    #print("Steer: " + str(steer))
+    steer = turnControl.pid(xDist, yDist, 1/camera.framerate)
+    print("Steer: " + str(steer))
     
     cv2.imshow("Frame", image)
     
@@ -98,18 +104,21 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     errorThresh = 5
     if (move and abs(xDist) > errorThresh):
         absSteer = abs(steer)
-        turnSpeed = min(int(speed * absSteer), MAX_ABS_SPEED)
+        turnSpeed = min(max(speed * absSteer, 0), MAX_ABS_SPEED)
+        turnSpeed = int(turnSpeed)
         print("turnSpeed: " + str(turnSpeed))
         if (xDist > 0):
-            print("TURNING RIGHT")
+            #print("TURNING RIGHT")
             robot.right_deg(turnSpeed, duration)
         elif (xDist < 0):
-            print("TURNING LEFT")
+            #print("TURNING LEFT")
             robot.left_deg(turnSpeed, duration)
     if(move):
-        #robot.forward(speed, duration)
-        diff = max(abs(steer) * speed - MAX_ABS_SPEED, 0)
-        forwardSpeed = speed - (diff / speed);
+        forwardSteer = forwardControl.pid(xDist, yDist, 1/camera.framerate)
+        #diff = max(abs(steer) * speed - MAX_ABS_SPEED, 0)
+        forwardSpeed = speed - abs(forwardSteer)
+        forwardSpeed = min(max(0, forwardSpeed), MAX_ABS_SPEED)
+        #forwardSpeed = speed - (diff / speed);
         robot.forward(int(forwardSpeed))
         print("forwardSpeed: " + str(forwardSpeed))
     key = cv2.waitKey(1) & 0xFF
