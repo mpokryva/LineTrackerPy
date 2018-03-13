@@ -1,11 +1,11 @@
 class PIDController:
-    def __init__(self, tau_p, tau_i, tau_d):
+    def __init__(self, p_gain, i_gain, d_gain):
         self.error = 0
         self.prevError = 0
         self.errorSum = 0
-        self.tau_p = tau_p
-        self.tau_i = tau_i
-        self.tau_d = tau_d
+        self.p_gain = p_gain
+        self.i_gain = i_gain
+        self.d_gain = d_gain
 
     # x and y dist are distances from some reference point.
     def pid(self, xDist, yDist, dt):
@@ -14,5 +14,10 @@ class PIDController:
         d_cte = (cte - self.prevError) / dt
         self.prevError = cte
         self.errorSum += (cte * dt)
-        return - self.tau_p * cte - self.tau_d * d_cte \
-                - self.tau_i * self.errorSum
+        return - self.p_gain * cte - self.d_gain * d_cte \
+                - self.i_gain * self.errorSum
+
+    def setGains(self, p_gain, i_gain, d_gain):
+        self.p_gain = p_gain
+        self.i_gain = i_gain
+        self.d_gain = d_gain

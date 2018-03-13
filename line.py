@@ -6,8 +6,6 @@ import cv2
 import numpy as np
 import pid
 import sys
-#sys.path.insert(0, "~/Camera/MotorHatLibrary/examples")
-#sys.path.append("/MotorHatLibrary/examples")
 from MotorHatLibrary.examples import Robot
 
 camera = PiCamera()
@@ -44,16 +42,12 @@ def close(img):
     kernel = np.ones((5, 5), np.uint8)
     return cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
 
+SPEED = 90.0
 turn_p = 0.1
 turn_d = 0.01
 turn_i = 0.005
-forward_p = 0.01
-forward_d = 0.05
-forward_i = 0.005
-#tau_d = 0
-#tau_i = 0
 turnControl = pid.PIDController(turn_p, turn_i, turn_d)
-forwardControl = pid.PIDController(forward_p, forward_i, forward_d)
+forwardControl = pid.PIDController(0, 0, 0) # Gains set later.
 robot = Robot.Robot()
 move = True
 i = 0
@@ -95,14 +89,11 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     
     cv2.imshow("Frame", image)
     
-    minSpeed = 75
-    maxSpeed = 150
-    MAX_ABS_SPEED = 255
-    incFactor = 2
-    #speed = min(minSpeed + (i*incFactor), maxSpeed)
-    speed = minSpeed
+    maxSpeed = 90.0
+    MAX_ABS_SPEED = 255.0
+    speed = maxSpeed
     duration = 1/camera.framerate
-    errorThresh = 5
+    errorThresh = 5.0
     if (move and abs(xDist) > errorThresh):
         absSteer = abs(steer)
         turnSpeed = min(max(speed * absSteer, 0), MAX_ABS_SPEED)
@@ -115,11 +106,13 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
             #print("TURNING LEFT")
             robot.left_deg(turnSpeed, duration)
     if(move):
+        forward_p = (maxSpeed) / 255
+        forward_d = (maxSpeed) / (255 * 10)
+        forward_i = (maxSpeed) / (255 * 100)
+        forwardControl.setGains(forward_p, forward_i, forward_d)
         forwardSteer = forwardControl.pid(xDist, yDist, 1/camera.framerate)
-        #diff = max(abs(steer) * speed - MAX_ABS_SPEED, 0)
         forwardSpeed = speed - abs(forwardSteer)
         forwardSpeed = min(max(0, forwardSpeed), MAX_ABS_SPEED)
-        #forwardSpeed = speed - (diff / speed);
         robot.forward(int(forwardSpeed))
         print("forwardSpeed: " + str(forwardSpeed))
     key = cv2.waitKey(1) & 0xFF
