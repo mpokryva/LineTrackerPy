@@ -31,13 +31,11 @@ def getLargestContour(input, threshold, otsu=True):
     # Get largest contour (by area)
     maxIndex = 0
     maxArea = 0
-    for i in range(len(contours)):
-        area = cv2.contourArea(contours[i])
-        if area > maxArea:
-            maxArea = area
-            maxIndex = i
-    #return max(contours, key = cv2.contourArea)
-    return contours[maxIndex]
+    if (len(contours) > 0):
+        return max(contours, key = cv2.contourArea)
+    else:
+        return None
+
 
 def drawContour(img, contour, color, thickness=8):
     cv2.drawContours(img, [contour], -1, color, thickness)
@@ -66,7 +64,10 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     #image = image[300: 380]
     image = close(image)
     threshold = 100
-    contour = getLargestContour(image, threshold, True) # Don't do Otsu.
+    contour = getLargestContour(image, threshold, False) # Don't do Otsu.
+    if (contour is None):
+        print("No lines found... Stopping.")
+        break
     moment = cv2.moments(contour)
     if (moment["m00"] != 0):
         cx = int(moment["m10"]/moment["m00"])
