@@ -11,7 +11,7 @@ import sys
 from MotorHatLibrary.examples import Robot
 
 camera = PiCamera()
-camera.resolution = (640,480)
+camera.resolution = (320, 240)
 camera.framerate = 30
 camera.hflip = True
 camera.vflip = True
@@ -19,10 +19,10 @@ rawCapture = PiRGBArray(camera, size=camera.resolution)
 
 time.sleep(0.1)
 
-def getLargestContour(input):
+def getLargestContour(input, threshold):
     gray = cv2.cvtColor(input, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (3, 3), 0)
-    _,thresh = cv2.threshold(gray, 0, 255, \
+    _,thresh = cv2.threshold(gray, threshold, 255, \
             cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
     _,contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, \
             cv2.CHAIN_APPROX_SIMPLE)
@@ -45,8 +45,10 @@ def close(img):
     return cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
 
 tau_p = 0.2
-tau_d = 0.3
-tau_i = 0.1
+tau_d = 0.0
+tau_i = 0.0
+#tau_d = 0
+#tau_i = 0
 controller = pid.PIDController(tau_p, tau_i, tau_d)
 robot = Robot.Robot()
 move = True
@@ -57,7 +59,8 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     image = image[camera.resolution[1] - 80: camera.resolution[1]]
     #image = image[300: 380]
     image = close(image)
-    contour = getLargestContour(image)
+    threshold = 100
+    contour = getLargestContour(image, threshold)
     moment = cv2.moments(contour)
     if (moment["m00"] != 0):
         cx = int(moment["m10"]/moment["m00"])
@@ -73,7 +76,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     #print("xDist: " + str(xDist))
     #print("yDist: " + str(yDist))
     angle = np.arctan2(xDist, yDist) * (180 / np.pi)
-    print("Angle: " + str(angle))
+    #print("Angle: " + str(angle))
     # + angle = left, - angle = right
     # Draw stuff
     cv2.circle(image, (cx, cy), 4, (255, 255, 0), 2)
@@ -81,20 +84,22 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     cv2.line(image, (cx, cy), bottomCenter, (0, 255, 0), 4)
     
     steer = controller.pid(xDist, yDist, 1/camera.framerate)
-    print("Steer: " + str(steer))
+    #print("Steer: " + str(steer))
     
     cv2.imshow("Frame", image)
     
-    minSpeed = 50
+    minSpeed = 75
     maxSpeed = 150
-    MAX_SPEED_ABSOLUTE = 255
+    MAX_ABS_SPEED = 255
     incFactor = 2
-    speed = min(minSpeed + (i*incFactor), maxSpeed)
-    #speed = minSpeed
+    #speed = min(minSpeed + (i*incFactor), maxSpeed)
+    speed = minSpeed
     duration = 1/camera.framerate
-    if (move and abs(xDist) > 10):
+    errorThresh = 5
+    if (move and abs(xDist) > errorThresh):
         absSteer = abs(steer)
-        turnSpeed = min(int(speed * absSteer), MAX_SPEED_ABSOLUTE)
+        turnSpeed = min(int(speed * absSteer), MAX_ABS_SPEED)
+        print("turnSpeed: " + str(turnSpeed))
         if (xDist > 0):
             print("TURNING RIGHT")
             robot.right_deg(turnSpeed, duration)
@@ -103,7 +108,10 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
             robot.left_deg(turnSpeed, duration)
     if(move):
         #robot.forward(speed, duration)
-        robot.forward(speed)
+        diff = max(abs(steer) * speed - MAX_ABS_SPEED, 0)
+        forwardSpeed = speed - (diff / speed);
+        robot.forward(int(forwardSpeed))
+        print("forwardSpeed: " + str(forwardSpeed))
     key = cv2.waitKey(1) & 0xFF
 
     # Clear the stream for the next frame.
