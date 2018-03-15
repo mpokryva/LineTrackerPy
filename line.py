@@ -10,7 +10,7 @@ from MotorHatLibrary.examples import Robot
 
 camera = PiCamera()
 camera.resolution = (320, 240)
-camera.framerate = 30
+camera.framerate = 40
 camera.hflip = True
 camera.vflip = True
 rawCapture = PiRGBArray(camera, size=camera.resolution)
@@ -46,17 +46,19 @@ turn_p = 0.5
 turn_d = 0.01
 turn_i = 0.005
 turn_s = 0.005
-maxSpeed = 200.0
+maxSpeed = 255.0
 turnControl = pid.PIDController(turn_p, turn_i, turn_d, turn_s)
+speedControl = pid.PIDController(0, 0, 0, turn_s)
 robot = Robot.Robot()
 move = True
 i = 0
+lastSpeed = maxSpeed
 for frame in camera.capture_continuous(rawCapture, format="bgr", \
         use_video_port=True):
     image = frame.array
     image = image[camera.resolution[1] - 80: camera.resolution[1]]
     image = close(image)
-    threshold = 100
+    threshold = 50
     contour = getLargestContour(image, threshold, False) # Don't do Otsu.
     if (contour is None):
         print("No lines found... Stopping.")
@@ -85,14 +87,17 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     turn_p = maxSpeed / MAX_ABS_SPEED#0.5
     turn_d = maxSpeed / (MAX_ABS_SPEED * 50)#0.01
     turn_i = maxSpeed / (MAX_ABS_SPEED * 100)#0.005
-    turn_s = maxSpeed / (MAX_ABS_SPEED * 100)
-    turnControl.setGains(turn_p, turn_i, turn_d, turn_s)
+    turn_s = maxSpeed / (MAX_ABS_SPEED * 25)
+    turnControl.setGains(turn_p, turn_i, turn_d, 0)
+    speedControl.setGains(0, 0, 0, turn_s)
     steer = turnControl.pid(xDist, yDist, 1/camera.framerate)
+    speedDiff = speedControl.pid(xDist, yDist, 1/camera.framerate)
     print("Steer: " + str(steer))
-    
+    print("SpeedDiff: " + str(speedDiff)) 
     cv2.imshow("Frame", image)
     
-    speed = maxSpeed
+    speed = maxSpeed + speedDiff
+    lastSpeed = speed
     duration = 1/camera.framerate
     errorThresh = 5.0
     if (move and abs(xDist) > errorThresh):
