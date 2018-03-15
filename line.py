@@ -45,7 +45,7 @@ def close(img):
 turn_p = 0.5
 turn_d = 0.01
 turn_i = 0.005
-maxSpeed = 150.0
+maxSpeed = 175.0
 forwardSpeed = maxSpeed
 turnControl = pid.PIDController(turn_p, turn_i, turn_d)
 forwardControl = pid.PIDController(0, 0, 0) # Gains set later.
@@ -82,19 +82,24 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     drawContour(image, contour, (0, 0, 255), 4)
     cv2.line(image, (cx, cy), bottomCenter, (0, 255, 0), 4)
     
+    MAX_ABS_SPEED = 255.0
+    turn_p = maxSpeed / MAX_ABS_SPEED#0.5
+    turn_d = maxSpeed / (MAX_ABS_SPEED * 50)#0.01
+    turn_i = maxSpeed / (MAX_ABS_SPEED * 100)#0.005
+    #turn_p = 0.5
+    #turn_d = 0.01
+    #turn_i = 0.005
+    turnControl.setGains(turn_p, turn_i, turn_d)
     steer = turnControl.pid(xDist, yDist, 1/camera.framerate)
     print("Steer: " + str(steer))
     
     cv2.imshow("Frame", image)
     
-    MAX_ABS_SPEED = 255.0
     speed = maxSpeed
     duration = 1/camera.framerate
     errorThresh = 5.0
     if (move and abs(xDist) > errorThresh):
         absSteer = abs(steer)
-        turnSpeed = min(max(speed * absSteer, 0), MAX_ABS_SPEED)
-        turnSpeed = int(turnSpeed)
         robot.smooth_turn(int(speed), int(steer))
     key = cv2.waitKey(1) & 0xFF
 
