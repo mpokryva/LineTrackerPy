@@ -45,10 +45,9 @@ def close(img):
 turn_p = 0.5
 turn_d = 0.01
 turn_i = 0.005
-maxSpeed = 175.0
-forwardSpeed = maxSpeed
-turnControl = pid.PIDController(turn_p, turn_i, turn_d)
-forwardControl = pid.PIDController(0, 0, 0) # Gains set later.
+turn_s = 0.005
+maxSpeed = 200.0
+turnControl = pid.PIDController(turn_p, turn_i, turn_d, turn_s)
 robot = Robot.Robot()
 move = True
 i = 0
@@ -86,10 +85,8 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     turn_p = maxSpeed / MAX_ABS_SPEED#0.5
     turn_d = maxSpeed / (MAX_ABS_SPEED * 50)#0.01
     turn_i = maxSpeed / (MAX_ABS_SPEED * 100)#0.005
-    #turn_p = 0.5
-    #turn_d = 0.01
-    #turn_i = 0.005
-    turnControl.setGains(turn_p, turn_i, turn_d)
+    turn_s = maxSpeed / (MAX_ABS_SPEED * 100)
+    turnControl.setGains(turn_p, turn_i, turn_d, turn_s)
     steer = turnControl.pid(xDist, yDist, 1/camera.framerate)
     print("Steer: " + str(steer))
     
