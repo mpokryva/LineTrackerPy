@@ -42,10 +42,10 @@ def close(img):
     kernel = np.ones((5, 5), np.uint8)
     return cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
 
-turn_p = 0.5#0.1
-turn_d = 0.01#0.01
-turn_i = 0.005#0.005
-maxSpeed = 100.0
+turn_p = 0.5
+turn_d = 0.01
+turn_i = 0.005
+maxSpeed = 150.0
 forwardSpeed = maxSpeed
 turnControl = pid.PIDController(turn_p, turn_i, turn_d)
 forwardControl = pid.PIDController(0, 0, 0) # Gains set later.
@@ -56,7 +56,6 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
         use_video_port=True):
     image = frame.array
     image = image[camera.resolution[1] - 80: camera.resolution[1]]
-    #image = image[300: 380]
     image = close(image)
     threshold = 100
     contour = getLargestContour(image, threshold, False) # Don't do Otsu.
@@ -75,8 +74,6 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     bottomCenter = (width/2, height)
     xDist = (cx - bottomCenter[0])
     yDist = abs(cy - bottomCenter[1])
-    #print("xDist: " + str(xDist))
-    #print("yDist: " + str(yDist))
     angle = np.arctan2(xDist, yDist) * (180 / np.pi)
     #print("Angle: " + str(angle))
     # + angle = left, - angle = right
@@ -98,24 +95,7 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
         absSteer = abs(steer)
         turnSpeed = min(max(speed * absSteer, 0), MAX_ABS_SPEED)
         turnSpeed = int(turnSpeed)
-        #print("turnSpeed: " + str(turnSpeed))
-        #if (xDist > 0):
-            #print("TURNING RIGHT")
-            #robot.right_deg(turnSpeed, duration)
-        #elif (xDist < 0):
-            #print("TURNING LEFT")
-            #robot.left_deg(turnSpeed, duration)
         robot.smooth_turn(int(speed), int(steer))
-    if(move):
-        forward_p = (maxSpeed) / (MAX_ABS_SPEED)
-        forward_d = (maxSpeed) / (MAX_ABS_SPEED * 10)
-        forward_i = (maxSpeed) / (MAX_ABS_SPEED * 100)
-        forwardControl.setGains(forward_p, forward_i, forward_d)
-        forwardSteer = forwardControl.pid(xDist, yDist, 1/camera.framerate)
-        forwardSpeed = speed - abs(forwardSteer)
-        forwardSpeed = min(max(0, forwardSpeed), MAX_ABS_SPEED)
-        #robot.forward(int(forwardSpeed))
-        #print("forwardSpeed: " + str(forwardSpeed))
     key = cv2.waitKey(1) & 0xFF
 
     # Clear the stream for the next frame.
