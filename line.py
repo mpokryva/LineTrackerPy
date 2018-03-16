@@ -52,7 +52,10 @@ speedControl = pid.PIDController(0, 0, 0, turn_s)
 robot = Robot.Robot()
 move = True
 i = 0
-lastSpeed = maxSpeed
+max_tries = 5
+current_try = 1
+prev_speed = maxSpeed
+prev_steer = 0
 for frame in camera.capture_continuous(rawCapture, format="bgr", \
         use_video_port=True):
     image = frame.array
@@ -61,8 +64,14 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     threshold = 50
     contour = getLargestContour(image, threshold, False) # Don't do Otsu.
     if (contour is None):
-        print("No lines found... Stopping.")
-        break
+        if (current_try > max_tries):
+            print("No lines found... Stopping.")
+            break
+        print("No lines found... Try #" + str(current_try))
+        current_try += 1
+        robot.smooth_turn(int(prev_speed), int(prev_steer))
+        rawCapture.truncate(0)
+        continue
     moment = cv2.moments(contour)
     if (moment["m00"] != 0):
         cx = int(moment["m10"]/moment["m00"])
@@ -92,12 +101,13 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     speedControl.setGains(0, 0, 0, turn_s)
     steer = turnControl.pid(xDist, yDist, 1/camera.framerate)
     speedDiff = speedControl.pid(xDist, yDist, 1/camera.framerate)
-    print("Steer: " + str(steer))
-    print("SpeedDiff: " + str(speedDiff)) 
+    #print("Steer: " + str(steer))
+    #print("SpeedDiff: " + str(speedDiff)) 
     cv2.imshow("Frame", image)
     
     speed = maxSpeed + speedDiff
-    lastSpeed = speed
+    prev_speed = speed
+    prev_steer = steer
     duration = 1/camera.framerate
     errorThresh = 5.0
     if (move and abs(xDist) > errorThresh):
