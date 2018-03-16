@@ -60,9 +60,9 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
         use_video_port=True):
     image = frame.array
     image = image[camera.resolution[1] - 80: camera.resolution[1]]
-    image = close(image)
+#    image = close(image)
     threshold = 50
-    contour = getLargestContour(image, threshold, False) # Don't do Otsu.
+#    contour = getLargestContour(image, threshold, False) # Don't do Otsu.
     if (contour is None):
         if (current_try > max_tries):
             print("No lines found... Stopping.")
