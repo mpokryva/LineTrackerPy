@@ -1,1 +1,1 @@
-This is a readme.
+This is code for a high accuracy and speed line tracking robot. PID controls were programmed from scratch, and optimizations from the paper *Optimization of PID Control for High Speed Line Tracking Robots* (https://www.sciencedirect.com/science/article/pii/S1877050915038302) were used.
