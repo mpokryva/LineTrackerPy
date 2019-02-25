@@ -17,6 +17,8 @@ rawCapture = PiRGBArray(camera, size=camera.resolution)
 
 time.sleep(0.1)
 
+# Gets the largest contour in the image, by area,
+# as a list of (x,y) coordinate pairs.
 def getLargestContour(input, threshold, otsu=True):
     gray = cv2.cvtColor(input, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, (3, 3), 0)
@@ -74,8 +76,8 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
         continue
     moment = cv2.moments(contour)
     if (moment["m00"] != 0):
-        cx = int(moment["m10"]/moment["m00"])
-        cy = int(moment["m01"]/moment["m00"])
+        cx = int(moment["m10"]/moment["m00"]) # Get the center x.
+        cy = int(moment["m01"]/moment["m00"]) # Get the center y.
     else:
         cx, cy = 0, 0
     # Calculate angle.
@@ -84,31 +86,27 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     bottomCenter = (width/2, height)
     xDist = (cx - bottomCenter[0])
     yDist = abs(cy - bottomCenter[1])
-    angle = np.arctan2(xDist, yDist) * (180 / np.pi)
-    #print("Angle: " + str(angle))
-    # + angle = left, - angle = right
+    #angle = np.arctan2(xDist, yDist) * (180 / np.pi)
     # Draw stuff
     cv2.circle(image, (cx, cy), 4, (255, 255, 0), 2)
     drawContour(image, contour, (0, 0, 255), 4)
     cv2.line(image, (cx, cy), bottomCenter, (0, 255, 0), 4)
     
     MAX_ABS_SPEED = 255.0
-    turn_p = maxSpeed / MAX_ABS_SPEED#0.5
-    turn_d = maxSpeed / (MAX_ABS_SPEED * 50)#0.01
-    turn_i = maxSpeed / (MAX_ABS_SPEED * 100)#0.005
+    turn_p = maxSpeed / MAX_ABS_SPEED
+    turn_d = maxSpeed / (MAX_ABS_SPEED * 50)
+    turn_i = maxSpeed / (MAX_ABS_SPEED * 100)
     turn_s = maxSpeed / (MAX_ABS_SPEED * 25)
     turnControl.setGains(turn_p, turn_i, turn_d, 0)
     speedControl.setGains(0, 0, 0, turn_s)
     steer = turnControl.pid(xDist, yDist, 1/camera.framerate)
     speedDiff = speedControl.pid(xDist, yDist, 1/camera.framerate)
-    #print("Steer: " + str(steer))
-    #print("SpeedDiff: " + str(speedDiff)) 
     cv2.imshow("Frame", image)
     
     speed = maxSpeed + speedDiff
     prev_speed = speed
     prev_steer = steer
-    duration = 1/camera.framerate
+    duration = 1 / camera.framerate
     errorThresh = 5.0
     if (move and abs(xDist) > errorThresh):
         absSteer = abs(steer)

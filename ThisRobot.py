@@ -150,9 +150,9 @@ class Robot(object):
         if seconds is not None:
             time.sleep(seconds)
             self.stop()
+    
     # Negative steer = right turn, positive steer = left turn. 
     def smooth_turn(self, speed, steer, seconds=None):
-        #print("speed: %d, steer: %d" %(speed, steer))
         # Set motor speed and move both forward.
         lesserSpeed = max(0, min(speed - abs(steer), 255))
         if (steer < 0): # Right turn. Right wheel moves slower.
