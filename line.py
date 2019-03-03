@@ -10,7 +10,7 @@ from MotorHatLibrary.examples import Robot
 
 camera = PiCamera()
 camera.resolution = (320, 240)
-camera.framerate = 40
+camera.framerate = 15
 camera.hflip = True
 camera.vflip = True
 rawCapture = PiRGBArray(camera, size=camera.resolution)
@@ -26,6 +26,7 @@ def getLargestContour(input, threshold, otsu=True):
             else cv2.THRESH_BINARY_INV
     _,thresh = cv2.threshold(gray, threshold, 255, \
             threshType)
+    thresh = close(thresh)
     _,contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, \
             cv2.CHAIN_APPROX_SIMPLE)
     # Get largest contour (by area)
@@ -44,12 +45,13 @@ def close(img):
     kernel = np.ones((5, 5), np.uint8)
     return cv2.morphologyEx(img, cv2.MORPH_CLOSE, kernel)
 
-turn_p = 0.5
-turn_d = 0.01
-turn_i = 0.005
-turn_s = 0.005
 maxSpeed = 255.0
-turnControl = pid.PIDController(turn_p, turn_i, turn_d, turn_s)
+MAX_ABS_SPEED = 255.0
+turn_p = maxSpeed / MAX_ABS_SPEED
+turn_d = maxSpeed / (MAX_ABS_SPEED * 500)
+turn_i = maxSpeed / (MAX_ABS_SPEED * 500)
+turn_s = maxSpeed / (MAX_ABS_SPEED * 25)
+turnControl = pid.PIDController(turn_p, turn_i, turn_d, 0)
 speedControl = pid.PIDController(0, 0, 0, turn_s)
 robot = Robot.Robot()
 move = True
@@ -62,7 +64,6 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
         use_video_port=True):
     image = frame.array
     image = image[camera.resolution[1] - 80: camera.resolution[1]]
-    image = close(image)
     threshold = 50
     contour = getLargestContour(image, threshold, False) # Don't do Otsu.
     if (contour is None):
@@ -92,13 +93,6 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", \
     drawContour(image, contour, (0, 0, 255), 4)
     cv2.line(image, (cx, cy), bottomCenter, (0, 255, 0), 4)
     
-    MAX_ABS_SPEED = 255.0
-    turn_p = maxSpeed / MAX_ABS_SPEED
-    turn_d = maxSpeed / (MAX_ABS_SPEED * 50)
-    turn_i = maxSpeed / (MAX_ABS_SPEED * 100)
-    turn_s = maxSpeed / (MAX_ABS_SPEED * 25)
-    turnControl.setGains(turn_p, turn_i, turn_d, 0)
-    speedControl.setGains(0, 0, 0, turn_s)
     steer = turnControl.pid(xDist, yDist, 1/camera.framerate)
     speedDiff = speedControl.pid(xDist, yDist, 1/camera.framerate)
     cv2.imshow("Frame", image)
