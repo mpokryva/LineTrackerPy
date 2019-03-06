@@ -16,7 +16,7 @@ class PIDController:
         # yDist doesn't get used.
         # cte = cross track error.
         cte = x_dist
-        # Calculate derivate.
+        # Calculate derivative.
         d_cte = (cte - self.prev_error) / dt
         self.prev_error = cte
         if (len(self.prev_vals) == self.buffer_size):

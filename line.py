@@ -30,14 +30,14 @@ def getLargestContour(input, threshold, otsu=True):
     cv2.THRESH_BINARY_INV. This tells OpenCV to convert things BELOW 
     the threshold (as opposed to above) to white. This is important 
     since our line is black. Otsu thresholding is an adaptive thresholding 
-    algorithm, which I found was unneccessary for this project.
+    algorithm, which I found was unnecessary for this project.
     '''
     threshType = cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU if (otsu) \
             else cv2.THRESH_BINARY_INV
     _,thresh = cv2.threshold(gray, threshold, 255, \
             threshType)
     thresh = close(thresh)
-    # Find all countours in the thresholded image.
+    # Find all contours in the thresholded image.
     _,contours,_ = cv2.findContours(thresh, cv2.RETR_TREE, \
             cv2.CHAIN_APPROX_SIMPLE)
     # Return the largest contour (by area).
@@ -75,7 +75,7 @@ prev_steer = 0
 for frame in camera.capture_continuous(rawCapture, format="bgr", \
         use_video_port=True):
     image = frame.array
-    # We crop the image vertically, to eliminate irrelevant detais.
+    # We crop the image vertically, to eliminate irrelevant details.
     image = image[camera.resolution[1] - 80: camera.resolution[1]]
     # Any pixel with a value above this threshold will be set to 0 (black).
     threshold = 50
